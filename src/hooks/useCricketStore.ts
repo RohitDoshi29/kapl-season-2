@@ -534,7 +534,7 @@ export function useCricketStore() {
     const stats: Map<string, TeamStats> = new Map();
     
     teams.forEach(team => {
-      stats.set(team.id, { teamId: team.id, matchesPlayed: 0, totalRuns: 0 });
+      stats.set(team.id, { teamId: team.id, matchesPlayed: 0, wins: 0, losses: 0, totalRuns: 0 });
     });
 
     matchHistory.forEach(match => {
@@ -545,10 +545,20 @@ export function useCricketStore() {
         if (team1Stats) {
           team1Stats.matchesPlayed += 1;
           team1Stats.totalRuns += match.innings1?.runs || 0;
+          if (match.winner === match.team1Id) {
+            team1Stats.wins += 1;
+          } else if (match.winner) {
+            team1Stats.losses += 1;
+          }
         }
         if (team2Stats) {
           team2Stats.matchesPlayed += 1;
           team2Stats.totalRuns += match.innings2?.runs || 0;
+          if (match.winner === match.team2Id) {
+            team2Stats.wins += 1;
+          } else if (match.winner) {
+            team2Stats.losses += 1;
+          }
         }
       }
     });

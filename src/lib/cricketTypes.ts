@@ -98,6 +98,8 @@ export interface MatchState {
 export interface TeamStats {
   teamId: string;
   matchesPlayed: number;
+  wins: number;
+  losses: number;
   totalRuns: number;
 }
 

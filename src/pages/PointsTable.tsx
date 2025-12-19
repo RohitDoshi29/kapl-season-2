@@ -29,6 +29,8 @@ export default function PointsTable() {
         return {
           team,
           matchesPlayed: teamStats?.matchesPlayed || 0,
+          wins: teamStats?.wins || 0,
+          losses: teamStats?.losses || 0,
           totalRuns: teamStats?.totalRuns || 0,
         };
       })
@@ -55,7 +57,9 @@ export default function PointsTable() {
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Team</TableHead>
-                <TableHead className="text-center">Matches</TableHead>
+                <TableHead className="text-center">M</TableHead>
+                <TableHead className="text-center">W</TableHead>
+                <TableHead className="text-center">L</TableHead>
                 <TableHead className="text-right">Runs</TableHead>
               </TableRow>
             </TableHeader>
@@ -67,6 +71,8 @@ export default function PointsTable() {
                     <TeamBadge team={item.team} size="sm" />
                   </TableCell>
                   <TableCell className="text-center">{item.matchesPlayed}</TableCell>
+                  <TableCell className="text-center text-green-600 font-semibold">{item.wins}</TableCell>
+                  <TableCell className="text-center text-destructive font-semibold">{item.losses}</TableCell>
                   <TableCell
                     className={cn(
                       'text-right font-bold text-lg',
