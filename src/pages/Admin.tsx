@@ -3,7 +3,8 @@ import { AdminPasswordGate } from '@/components/cricket/AdminPasswordGate';
 import { Header } from '@/components/cricket/Header';
 import { Navigation } from '@/components/cricket/Navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, PlayCircle, Users, Settings, LogOut } from 'lucide-react';
+import { Shield, PlayCircle, Users, Settings, LogOut, Home } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import AdminScorerTab from '@/components/admin/AdminScorerTab';
@@ -24,9 +25,17 @@ export default function Admin() {
 
         <main className="container mx-auto px-4 py-6">
           <div className="flex justify-between items-center mb-4">
-            <p className="text-sm text-muted-foreground">
-              Signed in as: {user?.email}
-            </p>
+            <div className="flex items-center gap-4">
+              <Link to="/">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Home className="w-4 h-4" />
+                  Home
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground">
+                Signed in as: {user?.email}
+              </p>
+            </div>
             <Button
               variant="outline"
               size="sm"

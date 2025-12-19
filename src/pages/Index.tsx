@@ -4,8 +4,6 @@ import { Navigation } from '@/components/cricket/Navigation';
 import { ScoreCard } from '@/components/cricket/ScoreCard';
 import { BallTicker } from '@/components/cricket/BallTicker';
 import { OverTable } from '@/components/cricket/OverTable';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { PlayCircle } from 'lucide-react';
 
 const Index = () => {
@@ -81,15 +79,9 @@ const Index = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold mb-2">No Live Match</h2>
-              <p className="text-muted-foreground mb-6">
-                Start a new match to see live scores here
+              <p className="text-muted-foreground">
+                No match is currently in progress
               </p>
-              <Link to="/match-setup">
-                <Button size="lg" className="gap-2">
-                  <PlayCircle className="w-5 h-5" />
-                  Start New Match
-                </Button>
-              </Link>
             </div>
           </div>
         )}
