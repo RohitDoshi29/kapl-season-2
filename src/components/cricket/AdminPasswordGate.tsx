@@ -3,19 +3,27 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock, KeyRound } from 'lucide-react';
+import { Lock, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 interface AdminPasswordGateProps {
   children: React.ReactNode;
 }
 
-export function AdminPasswordGate({ children }: AdminPasswordGateProps) {
-  const { isAuthenticated, hasPassword, isLoaded, setPassword, login } = useAdminAuth();
-  const [password, setPasswordInput] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+// Input validation schemas
+const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
+const passwordSchema = z.string().min(8, { message: "Password must be at least 8 characters" }).max(72);
 
-  if (!isLoaded) {
+export function AdminPasswordGate({ children }: AdminPasswordGateProps) {
+  const { isAuthenticated, isAdmin, isLoading, signIn, signUp, signOut } = useAdminAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ email?: string; password?: string }>({});
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -23,30 +31,95 @@ export function AdminPasswordGate({ children }: AdminPasswordGateProps) {
     );
   }
 
-  if (isAuthenticated) {
+  // User is authenticated and is admin - show content
+  if (isAuthenticated && isAdmin) {
     return <>{children}</>;
   }
 
-  const handleSetPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.length < 4) {
-      toast.error('Password must be at least 4 characters');
-      return;
+  // User is authenticated but NOT admin - show access denied
+  if (isAuthenticated && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl">Access Denied</CardTitle>
+            <CardDescription>
+              You don't have admin privileges. Please contact an administrator to request access.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => signOut()} 
+              variant="outline" 
+              className="w-full h-12"
+            >
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const validateInputs = (): boolean => {
+    const errors: { email?: string; password?: string } = {};
+    
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      errors.email = emailResult.error.errors[0].message;
     }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+    
+    const passwordResult = passwordSchema.safeParse(password);
+    if (!passwordResult.success) {
+      errors.password = passwordResult.error.errors[0].message;
     }
-    setPassword(password);
-    toast.success('Admin password set successfully!');
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(password)) {
-      toast.success('Welcome back, Admin!');
-    } else {
-      toast.error('Incorrect password');
+    
+    if (!validateInputs()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password);
+        if (error) {
+          if (error.message.includes('already registered')) {
+            toast.error('This email is already registered. Please sign in instead.');
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          toast.success('Account created! You can now sign in.');
+          setIsSignUp(false);
+          setPassword('');
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast.error('Invalid email or password');
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          toast.success('Welcome back!');
+        }
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -55,43 +128,87 @@ export function AdminPasswordGate({ children }: AdminPasswordGateProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-            {hasPassword ? <Lock className="w-8 h-8 text-primary" /> : <KeyRound className="w-8 h-8 text-primary" />}
+            {isSignUp ? <UserPlus className="w-8 h-8 text-primary" /> : <Lock className="w-8 h-8 text-primary" />}
           </div>
           <CardTitle className="text-2xl">
-            {hasPassword ? 'Admin Login' : 'Set Admin Password'}
+            {isSignUp ? 'Create Account' : 'Admin Login'}
           </CardTitle>
           <CardDescription>
-            {hasPassword
-              ? 'Enter your password to access the admin panel'
-              : 'Create a password to secure the admin panel'}
+            {isSignUp
+              ? 'Create an account to request admin access'
+              : 'Sign in with your admin credentials'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={hasPassword ? handleLogin : handleSetPassword} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setValidationErrors(prev => ({ ...prev, email: undefined }));
+                }}
+                className={`h-12 ${validationErrors.email ? 'border-destructive' : ''}`}
+                disabled={isSubmitting}
+                autoComplete="email"
+              />
+              {validationErrors.email && (
+                <p className="text-sm text-destructive mt-1">{validationErrors.email}</p>
+              )}
+            </div>
             <div>
               <Input
                 type="password"
-                placeholder="Enter password"
+                placeholder="Password"
                 value={password}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="h-12"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setValidationErrors(prev => ({ ...prev, password: undefined }));
+                }}
+                className={`h-12 ${validationErrors.password ? 'border-destructive' : ''}`}
+                disabled={isSubmitting}
+                autoComplete={isSignUp ? 'new-password' : 'current-password'}
               />
+              {validationErrors.password && (
+                <p className="text-sm text-destructive mt-1">{validationErrors.password}</p>
+              )}
             </div>
-            {!hasPassword && (
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Confirm password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-            )}
-            <Button type="submit" className="w-full h-12 text-lg">
-              {hasPassword ? 'Login' : 'Set Password'}
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-lg gap-2" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                'Please wait...'
+              ) : isSignUp ? (
+                <>
+                  <UserPlus className="w-5 h-5" />
+                  Create Account
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Sign In
+                </>
+              )}
             </Button>
           </form>
+          
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setValidationErrors({});
+              }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              disabled={isSubmitting}
+            >
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>

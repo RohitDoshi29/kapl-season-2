@@ -1,43 +1,110 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const STORAGE_KEY = 'kapl_admin_password';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 export function useAdminAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasPassword, setHasPassword] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user has admin role
+  const checkAdminRole = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking admin role:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking admin role:', error);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
-    const savedPassword = localStorage.getItem(STORAGE_KEY);
-    setHasPassword(!!savedPassword);
-    setIsLoaded(true);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Defer admin role check with setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            checkAdminRole(session.user.id).then(setIsAdmin);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setIsAdmin(false);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        checkAdminRole(session.user.id).then(setIsAdmin);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAdminRole]);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
+    });
+    
+    return { data, error };
   }, []);
 
-  const setPassword = useCallback((password: string) => {
-    localStorage.setItem(STORAGE_KEY, password);
-    setHasPassword(true);
-    setIsAuthenticated(true);
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    return { data, error };
   }, []);
 
-  const login = useCallback((password: string): boolean => {
-    const savedPassword = localStorage.getItem(STORAGE_KEY);
-    if (savedPassword === password) {
-      setIsAuthenticated(true);
-      return true;
+  const signOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setSession(null);
+      setIsAdmin(false);
     }
-    return false;
-  }, []);
-
-  const logout = useCallback(() => {
-    setIsAuthenticated(false);
+    return { error };
   }, []);
 
   return {
-    isAuthenticated,
-    hasPassword,
-    isLoaded,
-    setPassword,
-    login,
-    logout,
+    user,
+    session,
+    isAdmin,
+    isLoading,
+    isAuthenticated: !!session,
+    signUp,
+    signIn,
+    signOut,
   };
 }

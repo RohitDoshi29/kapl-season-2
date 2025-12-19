@@ -3,13 +3,17 @@ import { AdminPasswordGate } from '@/components/cricket/AdminPasswordGate';
 import { Header } from '@/components/cricket/Header';
 import { Navigation } from '@/components/cricket/Navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, PlayCircle, Users, Settings } from 'lucide-react';
+import { Shield, PlayCircle, Users, Settings, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import AdminScorerTab from '@/components/admin/AdminScorerTab';
 import AdminMatchSetupTab from '@/components/admin/AdminMatchSetupTab';
 import AdminTeamsTab from '@/components/admin/AdminTeamsTab';
 import AdminSettingsTab from '@/components/admin/AdminSettingsTab';
+import { toast } from 'sonner';
 
 export default function Admin() {
+  const { signOut, user } = useAdminAuth();
   const [activeTab, setActiveTab] = useState('scorer');
 
   return (
@@ -19,6 +23,28 @@ export default function Admin() {
         <Header />
 
         <main className="container mx-auto px-4 py-6">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              Signed in as: {user?.email}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const { error } = await signOut();
+                if (error) {
+                  toast.error('Failed to sign out');
+                } else {
+                  toast.success('Signed out successfully');
+                }
+              }}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
+          </div>
+          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 max-w-lg mx-auto">
               <TabsTrigger value="scorer" className="gap-2">
