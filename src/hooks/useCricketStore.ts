@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Team, Match, MatchState, TeamStats, DEFAULT_TEAMS, Ball, Over, Player, Innings } from '@/lib/cricketTypes';
+import { Team, Match, MatchState, TeamStats, DEFAULT_TEAMS, Ball, Over, Player, Innings, MatchType } from '@/lib/cricketTypes';
 import type { Json } from '@/integrations/supabase/types';
 
 // Helper to convert DB team to app Team
@@ -96,6 +96,7 @@ export function useCricketStore() {
             currentInnings: h.current_innings as 1 | 2,
             status: h.status as 'setup' | 'live' | 'completed',
             winner: h.winner,
+            matchType: (h.match_type || 'group') as MatchType,
           })));
         }
 
@@ -165,6 +166,7 @@ export function useCricketStore() {
               currentInnings: h.current_innings as 1 | 2,
               status: h.status as 'setup' | 'live' | 'completed',
               winner: h.winner,
+              matchType: (h.match_type || 'group') as MatchType,
             })));
           }
         }
@@ -227,7 +229,7 @@ export function useCricketStore() {
     }
   }, []);
 
-  const startMatch = useCallback(async (group: 'A' | 'B', team1Id: string, team2Id: string) => {
+  const startMatch = useCallback(async (group: 'A' | 'B', team1Id: string, team2Id: string, matchType: MatchType = 'group') => {
     const newMatch: Match = {
       id: Date.now().toString(),
       group,
@@ -238,6 +240,7 @@ export function useCricketStore() {
       currentInnings: 1,
       status: 'live',
       winner: null,
+      matchType,
     };
     
     const newState = { currentMatch: newMatch, lastAction: null };
@@ -510,6 +513,7 @@ export function useCricketStore() {
         current_innings: match.currentInnings,
         status: match.status,
         winner: match.winner,
+        match_type: match.matchType,
       });
 
     if (error) {
