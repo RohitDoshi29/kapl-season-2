@@ -22,6 +22,7 @@ export type Database = {
           id: string
           innings1: Json | null
           innings2: Json | null
+          match_type: string
           status: string
           team1_id: string
           team2_id: string
@@ -34,6 +35,7 @@ export type Database = {
           id: string
           innings1?: Json | null
           innings2?: Json | null
+          match_type?: string
           status?: string
           team1_id: string
           team2_id: string
@@ -46,6 +48,7 @@ export type Database = {
           id?: string
           innings1?: Json | null
           innings2?: Json | null
+          match_type?: string
           status?: string
           team1_id?: string
           team2_id?: string

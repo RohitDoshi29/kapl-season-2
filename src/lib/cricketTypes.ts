@@ -65,6 +65,8 @@ export interface Innings {
   battingOrder: string[]; // Player IDs in batting order
 }
 
+export type MatchType = 'group' | 'semi_final_1' | 'semi_final_2' | 'final';
+
 export interface Match {
   id: string;
   group: 'A' | 'B';
@@ -75,7 +77,15 @@ export interface Match {
   currentInnings: 1 | 2;
   status: 'setup' | 'live' | 'completed';
   winner: string | null;
+  matchType: MatchType;
 }
+
+export const MATCH_TYPE_LABELS: Record<MatchType, string> = {
+  group: 'Group Stage',
+  semi_final_1: 'Semi Final 1',
+  semi_final_2: 'Semi Final 2',
+  final: 'Final',
+};
 
 export interface MatchState {
   currentMatch: Match | null;
